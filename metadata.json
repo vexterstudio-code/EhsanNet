@@ -1,0 +1,6 @@
+{
+  "name": "v2rayNG",
+  "description": "An Android proxy and VPN client supporting Xray/V2Ray protocols, subscriptions, routing rules, per-app proxy, and configuration management.",
+  "requestFramePermissions": ["CAMERA"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
