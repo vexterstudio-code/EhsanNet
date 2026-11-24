@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">Kết nối ngay</string>
     <string name="app_tile_name">Kết nối ngay</string>
-    <string name="app_tile_first_use">Vui lòng thêm một cấu hình vào v2rayNG để sử dụng!</string>
+    <string name="app_tile_first_use">Vui lòng thêm một cấu hình vào EhsanNet để sử dụng!</string>
     <string name="navigation_drawer_open">Mở Menu ứng dụng</string>
     <string name="navigation_drawer_close">Đóng Menu ứng dụng</string>
     <string name="migration_success">Đã chuyển dữ liệu!</string>
@@ -14,20 +14,20 @@
     <string name="pull_down_to_refresh">Kéo xuống để làm mới!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">Dịch vụ v2rayNG</string>
+    <string name="notification_channel_service">Dịch vụ EhsanNet</string>
     <string name="notification_channel_subscription_updates">Cập nhật gói đăng ký</string>
     <string name="notification_channel_connection_checks">Kiểm tra kết nối</string>
-    <string name="notification_action_stop_v2ray">Ngắt kết nối v2rayNG</string>
-    <string name="toast_permission_denied">Vui lòng cấp các quyền cần thiết cho v2rayNG. Bạn có thể đã từ chối quyền truy cập máy ảnh hoặc bộ nhớ.</string>
+    <string name="notification_action_stop_v2ray">Ngắt kết nối EhsanNet</string>
+    <string name="toast_permission_denied">Vui lòng cấp các quyền cần thiết cho EhsanNet. Bạn có thể đã từ chối quyền truy cập máy ảnh hoặc bộ nhớ.</string>
     <string name="toast_permission_denied_notification">Không thể nhận quyền thông báo</string>
     <string name="notification_action_more">Nhấn để biết thêm…</string>
-    <string name="toast_services_start">Đang khởi động v2rayNG…</string>
-    <string name="toast_services_stop">Đã dừng v2rayNG!</string>
-    <string name="toast_services_success">Đã khởi động v2rayNG!</string>
-    <string name="toast_services_failure">Không thể khởi động v2rayNG, kiểm tra lại cấu hình!</string>
+    <string name="toast_services_start">Đang khởi động EhsanNet…</string>
+    <string name="toast_services_stop">Đã dừng EhsanNet!</string>
+    <string name="toast_services_success">Đã khởi động EhsanNet!</string>
+    <string name="toast_services_failure">Không thể khởi động EhsanNet, kiểm tra lại cấu hình!</string>
 
     <!--ServerActivity-->
-    <string name="title_server">v2rayNG</string>
+    <string name="title_server">EhsanNet</string>
     <string name="menu_item_add_config">Thêm cấu hình</string>
     <string name="menu_item_save_config">Lưu cấu hình</string>
     <string name="menu_item_edit_config">Chỉnh sửa cấu hình</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">Cài đặt chế độ UI</string>
     <string name="title_pref_dynamic_color">Bật màu động</string>
     <string name="summary_pref_dynamic_color">Chỉ hoạt động trên Android 12+</string>
+    <string name="title_pref_rgb_border_enabled">Viền RGB khi kết nối</string>
+    <string name="summary_pref_rgb_border_enabled">Hiển thị viền sáng RGB chuyển động quanh màn hình khi đang kết nối</string>
     <string name="title_pref_use_hev_tunnel">Dùng Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">Khi bật, TUN sẽ dùng hev-socks5-tunnel; nếu không, TUN sẽ dùng xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Mức nhật ký Hev TUN</string>
@@ -377,7 +379,7 @@
     <string name="toast_server_not_found_in_group">Không tìm thấy máy chủ đã chọn trong nhóm hiện tại</string>
     <string name="title_locate_selected_config">Tìm cấu hình đã chọn</string>
 
-    <string name="tasker_start_service">Khởi động v2rayNG</string>
+    <string name="tasker_start_service">Khởi động EhsanNet</string>
     <string name="tasker_setting_confirm">Xác nhận</string>
 
     <!-- RoutingSettingActivity -->
@@ -572,5 +574,28 @@
     <string name="sub_info_open_support">Mở liên kết hỗ trợ</string>
     <string name="sub_info_open_page">Mở trang thông tin đăng ký</string>
     <string name="sub_info_unlimited">Không giới hạn</string>
+    <string name="acc_vip">Mở bot VIP</string>
+    <string name="empty_servers_hint">Nhấn + ở góc trên để thêm hoặc nhập cấu hình</string>
+    <string name="connection_mode_normal">Thường</string>
+    <string name="connection_mode_boost">Tăng tốc</string>
+    <string name="connection_mode_normal_desc">Chọn thủ công</string>
+    <string name="connection_mode_boost_desc">Tự chọn tốt nhất</string>
+    <string name="connection_boost_scanning">Đang tìm máy chủ tốt nhất…</string>
+    <string name="connection_boost_scanning_progress">Đang quét %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">Không có cấu hình khả dụng. Hãy thêm hoặc bật đăng ký.</string>
+    <string name="connection_boost_selected_format">Tăng tốc: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">Tăng tốc dự phòng: %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">Đã hủy quét tăng tốc</string>
+    <string name="connection_select_config_first">Vui lòng chọn cấu hình trước</string>
+    <string name="connection_standalone_group">Cục bộ</string>
+    <string name="connection_connecting_label">Đang kết nối…</string>
+    <string name="connection_disconnecting_label">Đang ngắt…</string>
+    <string name="connection_disconnect_action">Ngắt kết nối</string>
+    <string name="connection_tap_to_ping">Chạm để kiểm tra ping</string>
+    <string name="acc_download_speed">Tốc độ tải xuống: %1$s</string>
+    <string name="acc_upload_speed">Tốc độ tải lên: %1$s</string>
+    <string name="acc_cancel_boost">Hủy quét tăng tốc</string>
+    <string name="acc_connect_normal">Kết nối thường</string>
+    <string name="acc_connect_boost">Kết nối tăng tốc</string>
 
 </resources>

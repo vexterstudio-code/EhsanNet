@@ -9,11 +9,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.aistudio.v2rayng.kxmpzq"
+        applicationId = "com.ehsannet.vpn"
         minSdk = 24
         targetSdk = 36
-        versionCode = 760
-        versionName = "2.4.0"
+        versionCode = 762
+        versionName = "2.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +89,7 @@ android {
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
+    implementation("com.github.2dust:libv2ray:26.11.9@aar")
 
     // AndroidX Core Libraries
     implementation(libs.androidx.core.ktx)

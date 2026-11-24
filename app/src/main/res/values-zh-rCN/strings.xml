@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">开关</string>
     <string name="app_tile_name">开关</string>
     <string name="app_tile_first_use">初次使用此功能请先用 APP 添加配置</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">请下拉刷新!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">v2rayNG 服务</string>
+    <string name="notification_channel_service">EhsanNet 服务</string>
     <string name="notification_channel_subscription_updates">订阅更新</string>
     <string name="notification_channel_connection_checks">连接检查</string>
     <string name="notification_action_stop_v2ray">停止</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">深色模式</string>
     <string name="title_pref_dynamic_color">开启莫奈取色</string>
     <string name="summary_pref_dynamic_color">仅在 Android 12+ 设备上工作</string>
+    <string name="title_pref_rgb_border_enabled">连接时显示 RGB 边框</string>
+    <string name="summary_pref_rgb_border_enabled">连接后在屏幕四周显示动态 RGB 霓虹光效边框</string>
     <string name="title_pref_use_hev_tunnel">启用 Hev TUN 功能</string>
     <string name="summary_pref_use_hev_tunnel">选择启用后 TUN 将使用 hev-socks5-tunnel 否则使用 xray-core</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN 日志级别</string>
@@ -572,5 +574,28 @@
     <string name="sub_info_open_support">打开支持链接</string>
     <string name="sub_info_open_page">打开订阅信息页面</string>
     <string name="sub_info_unlimited">无限制</string>
+    <string name="acc_vip">打开 VIP 机器人</string>
+    <string name="empty_servers_hint">点击右上角 + 添加或导入配置</string>
+    <string name="connection_mode_normal">普通</string>
+    <string name="connection_mode_boost">加速</string>
+    <string name="connection_mode_normal_desc">手动选择</string>
+    <string name="connection_mode_boost_desc">自动优选</string>
+    <string name="connection_boost_scanning">正在寻找最佳节点…</string>
+    <string name="connection_boost_scanning_progress">正在扫描 %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">未找到可用配置，请先添加或启用订阅。</string>
+    <string name="connection_boost_selected_format">加速已选：%1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">加速回退：%1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">已取消加速扫描</string>
+    <string name="connection_select_config_first">请先选择一个配置</string>
+    <string name="connection_standalone_group">本地</string>
+    <string name="connection_connecting_label">正在连接…</string>
+    <string name="connection_disconnecting_label">正在断开…</string>
+    <string name="connection_disconnect_action">断开</string>
+    <string name="connection_tap_to_ping">点击测速</string>
+    <string name="acc_download_speed">下载速度：%1$s</string>
+    <string name="acc_upload_speed">上传速度：%1$s</string>
+    <string name="acc_cancel_boost">取消加速扫描</string>
+    <string name="acc_connect_normal">普通连接</string>
+    <string name="acc_connect_boost">加速连接</string>
 
 </resources>

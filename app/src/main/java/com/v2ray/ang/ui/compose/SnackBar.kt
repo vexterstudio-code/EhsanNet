@@ -154,7 +154,7 @@ private val ToastHorizontalPad = 16.dp
 private val ToastVerticalPad = 12.dp
 private const val ToastMaxLines = 8
 private const val ToastMaxWidthFraction = 0.75f
-private val ToastBottomOffset = 100.dp
+private val ToastBottomOffset = 136.dp
 private const val SnackbarThrottleMs = 2000L
 
 @Composable

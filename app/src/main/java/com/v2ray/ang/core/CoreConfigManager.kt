@@ -99,28 +99,19 @@ object CoreConfigManager {
 
         val json = JsonUtil.parseString(raw)?.takeIf { it.isJsonObject }?.asJsonObject ?: return result
 
-        // Inject or remove traffic statistics configuration based on user preference
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) == true) {
-            if (!json.has("stats")) {
-                json.add("stats", JsonObject())
+        // Always keep outbound traffic statistics enabled so live bottom-bar speed telemetry works
+        if (!json.has("stats")) {
+            json.add("stats", JsonObject())
+        }
+        val policyObj = json.getAsJsonObject("policy") ?: JsonObject().also {
+            json.add("policy", it)
+        }
+        if (!policyObj.has("system")) {
+            val systemObj = JsonObject().apply {
+                addProperty("statsOutboundUplink", true)
+                addProperty("statsOutboundDownlink", true)
             }
-            if (!json.has("policy")) {
-                val policyObj = JsonObject()
-                val systemObj = JsonObject()
-                systemObj.addProperty("statsOutboundUplink", true)
-                systemObj.addProperty("statsOutboundDownlink", true)
-                policyObj.add("system", systemObj)
-                json.add("policy", policyObj)
-            }
-        } else {
-            json.remove("stats")
-            // Keep user-defined policy levels, only strip the stats-related system block
-            json.get("policy")?.takeIf { it.isJsonObject }?.asJsonObject?.let { policy ->
-                policy.remove("system")
-                if (policy.entrySet().isEmpty()) {
-                    json.remove("policy")
-                }
-            }
+            policyObj.add("system", systemObj)
         }
 
         if (!needTun()) {
@@ -726,12 +717,21 @@ object CoreConfigManager {
     }
 
     /**
-     * Remove speed-test runtime sections when the feature is disabled.
+     * Keep runtime outbound stats active for live bottom-bar speed telemetry;
+     * speedtest configs separately strip stats in [postProcessForSpeedtest].
      */
     private fun applySpeedDisabled(v2rayConfig: V2rayConfig) {
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) {
-            v2rayConfig.stats = null
-            v2rayConfig.policy?.system = null
+        if (v2rayConfig.stats == null) {
+            v2rayConfig.stats = emptyMap<String, Any>()
+        }
+        val policy = v2rayConfig.policy ?: V2rayConfig.PolicyBean(levels = emptyMap()).also {
+            v2rayConfig.policy = it
+        }
+        if (policy.system == null) {
+            policy.system = mapOf(
+                "statsOutboundUplink" to true,
+                "statsOutboundDownlink" to true,
+            )
         }
     }
 

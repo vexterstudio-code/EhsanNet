@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -167,6 +168,7 @@ fun SettingsScreen(
     }
     var uiModeNight by rememberMmkvString(AppConfig.PREF_UI_MODE_NIGHT, "0")
     var dynamicColor by rememberMmkvBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+    var rgbBorderEnabled by rememberMmkvBool(AppConfig.PREF_RGB_BORDER_ENABLED, true)
 
     var ipv6Enabled by rememberMmkvBool(AppConfig.PREF_IPV6_ENABLED, false)
     var preferIpv6 by rememberMmkvBool(AppConfig.PREF_PREFER_IPV6, false)
@@ -282,6 +284,13 @@ fun SettingsScreen(
                         dynamicColor = it
                         ThemeManager.setDynamicColorEnabled(it)
                     }
+                )
+                SettingsSwitchItem(
+                    title = stringResource(R.string.title_pref_rgb_border_enabled),
+                    summary = stringResource(R.string.summary_pref_rgb_border_enabled),
+                    checked = rgbBorderEnabled,
+                    onCheckedChange = { rgbBorderEnabled = it },
+                    modifier = Modifier.testTag("rgb_border_switch")
                 )
                 SettingsListItem(
                     title = stringResource(R.string.title_language),

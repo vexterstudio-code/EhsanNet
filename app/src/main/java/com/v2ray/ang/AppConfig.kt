@@ -59,6 +59,9 @@ object AppConfig {
     const val PREF_APP_LOCALE_MIGRATED = "pref_app_locale_migrated"
     const val PREF_UI_MODE_NIGHT = "pref_ui_mode_night"
     const val PREF_DYNAMIC_COLOR = "pref_dynamic_color"
+    const val PREF_RGB_BORDER_ENABLED = "pref_rgb_border_enabled"
+    const val PREF_CONNECTION_MODE = "pref_connection_mode"
+    const val PREF_LAST_ACTIVE_CONFIG_ID = "pref_last_active_config_id"
     const val PREF_IPV6_ENABLED = "pref_ipv6_enabled"
     const val PREF_PREFER_IPV6 = "pref_prefer_ipv6"
     const val PREF_PROXY_SHARING = "pref_proxy_sharing_enabled"
@@ -127,13 +130,12 @@ object AppConfig {
     const val GITHUB_RAW_URL = "https://raw.githubusercontent.com"
     const val GITHUB_DOWNLOAD_URL = "$GITHUB_URL/%s/releases/latest/download"
     const val ANDROID_PACKAGE_NAME_LIST_URL = "$GITHUB_RAW_URL/2dust/androidpackagenamelist/master/proxy.txt"
-    const val APP_URL = "$GITHUB_URL/2dust/v2rayNG"
-    const val APP_API_URL = "https://api.github.com/repos/2dust/v2rayNG/releases"
+    const val APP_URL = "$GITHUB_URL/ehsannet/ehsannet"
+    const val APP_API_URL = "https://api.github.com/repos/ehsannet/ehsannet/releases"
     const val APP_ISSUES_URL = "$APP_URL/issues"
     const val APP_WIKI_MODE = "$APP_URL/wiki/Mode"
-    const val APP_PRIVACY_POLICY = "$GITHUB_RAW_URL/2dust/v2rayNG/master/CR.md"
-    const val APP_PROMOTION_URL = "aHR0cHM6Ly85LjIzNDQ1Ni54eXovYWJjLmh0bWw="
-    const val TG_CHANNEL_URL = "https://t.me/github_2dust"
+    const val APP_PRIVACY_POLICY = "$GITHUB_RAW_URL/ehsannet/ehsannet/master/CR.md"
+    const val VIP_BOT_URL = "https://t.me/vipvpnmeli2_bot"
     const val DELAY_TEST_URL = "https://www.gstatic.com/generate_204"
     const val DELAY_TEST_URL2 = "https://www.google.com/generate_204"
     const val OBSERVATORY_LEAST_PING_INTERVAL = "3m"
@@ -184,6 +186,7 @@ object AppConfig {
     const val MSG_REGISTER_CLIENT = 1
     const val MSG_STATE_RUNNING = 11
     const val MSG_STATE_NOT_RUNNING = 12
+    const val MSG_TRAFFIC_STATS = 13
     const val MSG_UNREGISTER_CLIENT = 2
     const val MSG_STATE_START = 3
     const val MSG_STATE_START_SUCCESS = 31

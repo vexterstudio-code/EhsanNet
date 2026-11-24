@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Upper slanted stroke -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M38,20 L88,20 L74,34 L44,34 L12,66 L12,46 Z" />
+    <!-- Lower E-hook stroke -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M42,42 L72,42 L58,56 L38,56 L26,68 L88,68 L74,82 L12,82 L12,72 Z" />
+</vector>

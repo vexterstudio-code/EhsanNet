@@ -23,11 +23,21 @@ data class MainUiState(
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val connectionUi: ConnectionUiState = ConnectionUiState(),
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
+    val rgbBorderEnabled: Boolean = true,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null
 )
+
+/**
+ * One-shot OS/service commands emitted by [MainViewModel] to the host Activity.
+ */
+sealed interface MainVpnCommand {
+    data class StartTunnel(val configId: String, val mode: ConnectionMode) : MainVpnCommand
+    data object StopTunnel : MainVpnCommand
+}
 
 /**
  * All possible user interaction intents
@@ -36,6 +46,11 @@ sealed interface MainAction {
     data object Initialize : MainAction
     data object RefreshGroups : MainAction
     data object ToggleService : MainAction
+    data class SelectConnectionMode(val mode: ConnectionMode) : MainAction
+    data object ConnectNormal : MainAction
+    data object ConnectBoost : MainAction
+    data object CancelBoostScan : MainAction
+    data object ClearStatusMessage : MainAction
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
     data object TestRealAllServers : MainAction
@@ -65,6 +80,7 @@ sealed interface MainAction {
     data class ShareFullContent(val guid: String) : MainAction
     data object DismissQRCodeDialog : MainAction
     data class OpenSubscriptionLink(val url: String) : MainAction
+    data object OpenVipBot : MainAction
 
     data class ImportBatchConfig(val configText: String) : MainAction
 

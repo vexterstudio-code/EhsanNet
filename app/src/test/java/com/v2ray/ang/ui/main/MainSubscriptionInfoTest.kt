@@ -47,4 +47,27 @@ class MainSubscriptionInfoTest {
         assertNull(model.expireMillis)
         assertFalse(model.expired)
     }
+
+    @Test
+    fun hidesTelegramLinksFromSubscriptionCard() {
+        val withTelegram = buildSubscriptionInfoUiModel(
+            SubscriptionUsageInfo(
+                supportUrl = "https://t.me/some_channel",
+                webPageUrl = "tg://resolve?domain=some_channel",
+            ),
+            now
+        )
+        assertNull(withTelegram.visibleSupportUrl())
+        assertNull(withTelegram.visibleWebPageUrl())
+
+        val withWebSupport = buildSubscriptionInfoUiModel(
+            SubscriptionUsageInfo(
+                supportUrl = "https://example.com/support",
+                webPageUrl = "https://example.com/panel",
+            ),
+            now
+        )
+        assertEquals("https://example.com/support", withWebSupport.visibleSupportUrl())
+        assertEquals("https://example.com/panel", withWebSupport.visibleWebPageUrl())
+    }
 }

@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Upper slanted EhsanNet stroke -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M37,18 L90,18 L75,33 L43,33 L10,66 L10,45 Z" />
+    <!-- Lower E-hook EhsanNet stroke -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M41,42 L70,42 L56,56 L38,56 L27,67 L90,67 L75,82 L10,82 L10,73 Z" />
+    <!-- Subtle proxy activity indicator dot -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M83,42 A7,7 0 1,1 82.99,42 Z" />
+</vector>

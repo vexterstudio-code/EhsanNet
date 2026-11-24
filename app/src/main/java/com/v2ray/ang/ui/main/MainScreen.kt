@@ -1,5 +1,14 @@
 package com.v2ray.ang.ui.main
 
+import android.graphics.Matrix
+import android.graphics.SweepGradient
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,14 +39,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
+import com.v2ray.ang.ui.compose.cyberCyanNeon
+import com.v2ray.ang.ui.compose.cyberRgbBlue
+import com.v2ray.ang.ui.compose.cyberRgbEmerald
+import com.v2ray.ang.ui.compose.cyberRgbLime
+import com.v2ray.ang.ui.compose.cyberRgbMagenta
+import com.v2ray.ang.ui.compose.cyberRgbOrange
+import com.v2ray.ang.ui.compose.cyberRgbRed
+import com.v2ray.ang.ui.compose.cyberRgbViolet
+import com.v2ray.ang.ui.compose.cyberRgbYellow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -70,12 +96,21 @@ fun MainScreen(
     }
 
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
-    val removeServer: (String, String) -> Unit = { guid, profileName ->
-        if (confirmRemove) {
-            showRemoveConfirm = ServerDeleteTarget(guid, profileName)
-        } else {
-            onAction(MainAction.RemoveServer(guid))
+    val removeServer: (String, String) -> Unit = remember(confirmRemove, onAction) {
+        { guid, profileName ->
+            if (confirmRemove) {
+                showRemoveConfirm = ServerDeleteTarget(guid, profileName)
+            } else {
+                onAction(MainAction.RemoveServer(guid))
+            }
         }
+    }
+    val onSelectServer = remember(onAction) { { guid: String -> onAction(MainAction.SelectServer(guid)) } }
+    val onEditServer = remember(onAction) {
+        { guid: String, profile: ProfileItem -> onAction(MainAction.EditServer(guid, profile)) }
+    }
+    val onOpenSubLink = remember(onAction) {
+        { url: String -> onAction(MainAction.OpenSubscriptionLink(url)) }
     }
 
     val pagerState = rememberPagerState(
@@ -146,18 +181,19 @@ fun MainScreen(
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            MainDrawerContent(
-                drawerState = drawerState,
-                onNavigate = { route ->
-                    scope.launch { drawerState.close() }
-                    onNavigate(route)
-                }
-            )
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                MainDrawerContent(
+                    drawerState = drawerState,
+                    onNavigate = { route ->
+                        scope.launch { drawerState.close() }
+                        onNavigate(route)
+                    }
+                )
+            }
+        ) {
         Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
@@ -244,8 +280,8 @@ fun MainScreen(
                             searchQuery = searchQuery,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
-                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                            onSelectServer = onSelectServer,
+                            onEditServer = onEditServer,
                             onShareServer = { guid, profile ->
                                 shareTarget = Triple(guid, profile, false)
                             },
@@ -255,7 +291,7 @@ fun MainScreen(
                             onRemoveServer = removeServer,
                             usageInfo = group.usageInfo,
                             groupTitle = group.remarks,
-                            onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
+                            onOpenLink = onOpenSubLink,
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,
@@ -268,6 +304,8 @@ fun MainScreen(
             }
             MainBottomBar(
                 displayText = displayText,
+                status = uiState.status,
+                connectionUi = uiState.connectionUi,
                 isRunning = isRunning,
                 isDarkTheme = isDarkTheme,
                 onAction = onAction,
@@ -277,5 +315,117 @@ fun MainScreen(
             )
             }
         }
+        }
+        RgbScreenBorderOverlay(
+            isRunning = isRunning && uiState.rgbBorderEnabled,
+            modifier = Modifier.matchParentSize()
+        )
     }
+}
+
+@Composable
+private fun RgbScreenBorderOverlay(
+    isRunning: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isRunning) 1f else 0f,
+        animationSpec = tween(durationMillis = 420),
+        label = "rgbBorderAlpha"
+    )
+    if (!isRunning && borderAlpha <= 0.01f) return
+
+    val infiniteTransition = rememberInfiniteTransition(label = "rgbScreenBorder")
+    val angle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rgbBorderAngle"
+    )
+    val glowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rgbGlowPulse"
+    )
+    val matrix = remember { Matrix() }
+
+    Box(
+        modifier = modifier
+            .testTag("rgb_screen_border")
+            .drawWithCache {
+                val intColors = intArrayOf(
+                    cyberRgbRed.toArgb(),
+                    cyberRgbOrange.toArgb(),
+                    cyberRgbYellow.toArgb(),
+                    cyberRgbLime.toArgb(),
+                    cyberRgbEmerald.toArgb(),
+                    cyberCyanNeon.toArgb(),
+                    cyberRgbBlue.toArgb(),
+                    cyberRgbViolet.toArgb(),
+                    cyberRgbMagenta.toArgb(),
+                    cyberRgbRed.toArgb(),
+                )
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val sweepShader = SweepGradient(cx, cy, intColors, null)
+                val brush = ShaderBrush(sweepShader)
+                val outerAuraWidthPx = 16.dp.toPx()
+                val midGlowWidthPx = 8.5.dp.toPx()
+                val strokeWidthPx = 4.5.dp.toPx()
+                val outerCornerRadiusPx = 22.dp.toPx()
+                val innerCornerRadiusPx = 18.dp.toPx()
+
+                onDrawBehind {
+                    if (size.width <= 0f || size.height <= 0f) return@onDrawBehind
+                    matrix.setRotate(angle, cx, cy)
+                    sweepShader.setLocalMatrix(matrix)
+
+                    val outerInset = outerAuraWidthPx / 2f
+                    drawRoundRect(
+                        brush = brush,
+                        topLeft = Offset(outerInset, outerInset),
+                        size = Size(
+                            width = (size.width - outerAuraWidthPx).coerceAtLeast(0f),
+                            height = (size.height - outerAuraWidthPx).coerceAtLeast(0f)
+                        ),
+                        cornerRadius = CornerRadius(outerCornerRadiusPx, outerCornerRadiusPx),
+                        alpha = 0.22f * glowPulse * borderAlpha,
+                        style = Stroke(width = outerAuraWidthPx)
+                    )
+
+                    val midInset = midGlowWidthPx / 2f
+                    drawRoundRect(
+                        brush = brush,
+                        topLeft = Offset(midInset, midInset),
+                        size = Size(
+                            width = (size.width - midGlowWidthPx).coerceAtLeast(0f),
+                            height = (size.height - midGlowWidthPx).coerceAtLeast(0f)
+                        ),
+                        cornerRadius = CornerRadius(outerCornerRadiusPx, outerCornerRadiusPx),
+                        alpha = 0.48f * glowPulse * borderAlpha,
+                        style = Stroke(width = midGlowWidthPx)
+                    )
+
+                    val strokeInset = strokeWidthPx / 2f
+                    drawRoundRect(
+                        brush = brush,
+                        topLeft = Offset(strokeInset, strokeInset),
+                        size = Size(
+                            width = (size.width - strokeWidthPx).coerceAtLeast(0f),
+                            height = (size.height - strokeWidthPx).coerceAtLeast(0f)
+                        ),
+                        cornerRadius = CornerRadius(innerCornerRadiusPx, innerCornerRadiusPx),
+                        alpha = borderAlpha,
+                        style = Stroke(width = strokeWidthPx)
+                    )
+                }
+            }
+    )
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">تعویض</string>
     <string name="app_tile_name">تعویض</string>
     <string name="app_tile_first_use">برای اولین استفاده از این قابلیت، لطفاً ابتدا از داخل برنامه یک سرور اضافه کنید</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">برای بروزرسانی، صفحه را به پایین بکشید!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">سرویس v2rayNG</string>
+    <string name="notification_channel_service">سرویس EhsanNet</string>
     <string name="notification_channel_subscription_updates">به‌روزرسانی اشتراک‌ها</string>
     <string name="notification_channel_connection_checks">بررسی اتصال</string>
     <string name="notification_action_stop_v2ray">توقف</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
+    <string name="title_pref_rgb_border_enabled">حاشیه RGB هنگام اتصال</string>
+    <string name="summary_pref_rgb_border_enabled">نمایش نوار نوری RGB متحرک دور صفحه هنگام اتصال به سرور</string>
     <string name="title_pref_use_hev_tunnel">استفاده از Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">اگر فعال باشد، تونل VPN از hev-socks5-tunnel استفاده می‌کند؛ در غیر این صورت از xray-core استفاده خواهد شد.</string>
     <string name="title_pref_hev_tunnel_loglevel">سطح گزارش‌های Hev TUN</string>
@@ -574,5 +576,28 @@
     <string name="sub_info_open_support">باز کردن لینک پشتیبانی</string>
     <string name="sub_info_open_page">باز کردن صفحه اطلاعات اشتراک</string>
     <string name="sub_info_unlimited">نامحدود</string>
+    <string name="acc_vip">باز کردن ربات VIP</string>
+    <string name="empty_servers_hint">برای افزودن یا وارد کردن کانفیگ روی + در بالای صفحه بزنید</string>
+    <string name="connection_mode_normal">نرمال</string>
+    <string name="connection_mode_boost">بوست</string>
+    <string name="connection_mode_normal_desc">انتخاب دستی</string>
+    <string name="connection_mode_boost_desc">بهترین سرور</string>
+    <string name="connection_boost_scanning">در حال یافتن بهترین سرور...</string>
+    <string name="connection_boost_scanning_progress">اسکن %1$d از %2$d...</string>
+    <string name="connection_boost_empty_pool">هیچ کانفیگ فعالی یافت نشد. ابتدا اشتراک یا کانفیگ اضافه کنید.</string>
+    <string name="connection_boost_selected_format">بوست: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">بوست (پشتیبان): %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">اسکن بوست لغو شد</string>
+    <string name="connection_select_config_first">لطفاً ابتدا یک کانفیگ انتخاب کنید</string>
+    <string name="connection_standalone_group">محلی</string>
+    <string name="connection_connecting_label">در حال اتصال...</string>
+    <string name="connection_disconnecting_label">در حال قطع اتصال...</string>
+    <string name="connection_disconnect_action">قطع اتصال</string>
+    <string name="connection_tap_to_ping">لمس برای تست پینگ</string>
+    <string name="acc_download_speed">سرعت دانلود: %1$s</string>
+    <string name="acc_upload_speed">سرعت آپلود: %1$s</string>
+    <string name="acc_cancel_boost">لغو جستجوی بوست</string>
+    <string name="acc_connect_normal">اتصال نرمال</string>
+    <string name="acc_connect_boost">اتصال بوست</string>
 
 </resources>

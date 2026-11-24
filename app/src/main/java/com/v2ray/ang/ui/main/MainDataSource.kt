@@ -7,10 +7,12 @@ import com.v2ray.ang.dto.entities.ServerAffiliationInfo
 import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import java.io.Closeable
 
 interface MainDataSource : Closeable {
     val mainServiceEvent: Flow<MainServiceEvent>
+    val serviceEvents: SharedFlow<MainServiceEvent>
 
     fun getSelectedSubscriptionId(): String
     fun setSelectedSubscriptionId(id: String)
@@ -18,8 +20,20 @@ interface MainDataSource : Closeable {
     fun getSelectServer(): String?
     fun setSelectServer(guid: String)
 
+    fun getPersistedConnectionMode(): ConnectionMode
+    fun setPersistedConnectionMode(mode: ConnectionMode)
+
+    fun getLastActiveConfigId(): String?
+    fun setLastActiveConfigId(guid: String?)
+
+    fun getBoostSubscriptionGroups(): List<SubscriptionGroup>
+    fun getActiveConfigSummary(guid: String?): ActiveConfigSummary?
+    fun resolveNodeLatency(guid: String): Long?
+    fun recordNodeConnectionOutcome(guid: String, succeeded: Boolean)
+
     fun getConfirmRemove(): Boolean
     fun getDoubleColumnDisplay(): Boolean
+    fun getRgbBorderEnabled(): Boolean
     fun isGroupAllDisplayEnabled(): Boolean
 
     fun getString(resId: Int): String

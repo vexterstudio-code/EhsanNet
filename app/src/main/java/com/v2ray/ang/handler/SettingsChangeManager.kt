@@ -20,6 +20,7 @@ object SettingsChangeManager {
         AppConfig.PREF_LANGUAGE,
         AppConfig.PREF_UI_MODE_NIGHT,
         AppConfig.PREF_DYNAMIC_COLOR,
+        AppConfig.PREF_RGB_BORDER_ENABLED,
         AppConfig.PREF_IS_BOOTED,
     )
 

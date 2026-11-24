@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">সুইচ</string>
     <string name="app_tile_name">সুইচ</string>
     <string name="app_tile_first_use">এই ফিচারটি প্রথম ব্যবহার করা হচ্ছে, সার্ভার যোগ করতে অ্যাপটি ব্যবহার করুন</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">রিফ্রেশ করতে নিচে টানুন!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">v2rayNG সার্ভিস</string>
+    <string name="notification_channel_service">EhsanNet সার্ভিস</string>
     <string name="notification_channel_subscription_updates">সাবস্ক্রিপশন আপডেট</string>
     <string name="notification_channel_connection_checks">সংযোগ পরীক্ষা</string>
     <string name="notification_action_stop_v2ray">বন্ধ করুন</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">ইউআই মোড সেটিংস</string>
     <string name="title_pref_dynamic_color">ডায়নামিক রঙ চালু করুন</string>
     <string name="summary_pref_dynamic_color">শুধুমাত্র Android 12+ ডিভাইসে কাজ করে</string>
+    <string name="title_pref_rgb_border_enabled">সংযোগের সময় RGB বর্ডার</string>
+    <string name="summary_pref_rgb_border_enabled">সংযুক্ত থাকা অবস্থায় স্ক্রিনের চারপাশে অ্যানিমেটেড RGB আলোর বর্ডার দেখান</string>
     <string name="title_pref_use_hev_tunnel">Hev TUN সুবিধা চালু করুন</string>
     <string name="summary_pref_use_hev_tunnel">চালু থাকলে TUN hev-socks5-tunnel ব্যবহার করবে; অন্যথায় xray-core ব্যবহার করবে।</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN লগ স্তর</string>
@@ -574,5 +576,28 @@
     <string name="sub_info_open_support">সাপোর্ট লিঙ্ক খুলুন</string>
     <string name="sub_info_open_page">সাবস্ক্রিপশন তথ্যের পাতা খুলুন</string>
     <string name="sub_info_unlimited">সীমাহীন</string>
+    <string name="acc_vip">VIP বট খুলুন</string>
+    <string name="empty_servers_hint">কনফিগ যোগ করতে উপরের + বাটনে ট্যাপ করুন</string>
+    <string name="connection_mode_normal">নরমাল</string>
+    <string name="connection_mode_boost">বুস্ট</string>
+    <string name="connection_mode_normal_desc">ম্যানুয়াল নির্বাচন</string>
+    <string name="connection_mode_boost_desc">সেরা সার্ভার</string>
+    <string name="connection_boost_scanning">সেরা সার্ভার খোঁজা হচ্ছে…</string>
+    <string name="connection_boost_scanning_progress">স্ক্যান হচ্ছে %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">কোনো সক্রিয় কনফিগ পাওয়া যায়নি। প্রথমে সাবস্ক্রিপশন যোগ করুন।</string>
+    <string name="connection_boost_selected_format">বুস্ট: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">বুস্ট ব্যাকআপ: %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">বুস্ট স্ক্যান বাতিল হয়েছে</string>
+    <string name="connection_select_config_first">অনুগ্রহ করে আগে একটি কনফিগ নির্বাচন করুন</string>
+    <string name="connection_standalone_group">স্থানীয়</string>
+    <string name="connection_connecting_label">সংযুক্ত হচ্ছে…</string>
+    <string name="connection_disconnecting_label">বিচ্ছিন্ন হচ্ছে…</string>
+    <string name="connection_disconnect_action">বিচ্ছিন্ন</string>
+    <string name="connection_tap_to_ping">পিং দেখতে ট্যাপ করুন</string>
+    <string name="acc_download_speed">ডাউনলোড গতি: %1$s</string>
+    <string name="acc_upload_speed">আপলোড গতি: %1$s</string>
+    <string name="acc_cancel_boost">বুস্ট স্ক্যান বাতিল করুন</string>
+    <string name="acc_connect_normal">নরমাল সংযোগ</string>
+    <string name="acc_connect_boost">বুস্ট সংযোগ</string>
 
 </resources>

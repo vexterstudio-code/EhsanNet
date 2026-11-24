@@ -27,19 +27,23 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.PatternSyntaxException
 
@@ -69,22 +73,39 @@ private fun applyTestDelayResultsToRows(
 
 class MainViewModel(
     application: Application,
-    private val dataSource: MainDataSource
+    private val dataSource: MainDataSource,
+    probeRunner: NodeProbeRunner = AndroidNodeProbeRunner(dataSource),
+    private val boostSelectorEngine: BoostSelectorEngine = BoostSelectorEngine(probeRunner),
+    proxyEngine: ProxyEngine? = null,
 ) : BaseViewModel(application) {
 
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
     private val preloadDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
 
+    private val _vpnCommands = Channel<MainVpnCommand>(Channel.BUFFERED)
+    val vpnCommands: Flow<MainVpnCommand> = _vpnCommands.receiveAsFlow()
+
+    private val activeProxyEngine: ProxyEngine = proxyEngine ?: object : ProxyEngine {
+        override fun connect(configId: String, mode: ConnectionMode) {
+            _vpnCommands.trySend(MainVpnCommand.StartTunnel(configId, mode))
+        }
+
+        override fun disconnect() {
+            _vpnCommands.trySend(MainVpnCommand.StopTunnel)
+        }
+
+        override fun reconnect(configId: String, mode: ConnectionMode) {
+            _vpnCommands.trySend(MainVpnCommand.StartTunnel(configId, mode))
+        }
+
+        override fun testActiveLatency() {
+            testCurrentServerRealPing()
+        }
+    }
+
     // ---------- UI state ----------
-    private val _uiState = MutableStateFlow(
-        MainUiState(
-            selectedGroupId = dataSource.getSelectedSubscriptionId(),
-            selectedGuid = dataSource.getSelectServer(),
-            confirmRemove = dataSource.getConfirmRemove(),
-            doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
-        )
-    )
+    private val _uiState = MutableStateFlow(buildInitialUiState(dataSource))
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     // ---------- Keyword filtering ----------
@@ -109,6 +130,9 @@ class MainViewModel(
 
     private val testRequests = MainTestRequests()
     private var bulkTestJob: Job? = null
+    private var boostScanJob: Job? = null
+    private var transitionJob: Job? = null
+    private var stopConfirmationDeferred: CompletableDeferred<Unit>? = null
 
     private val initialPageReady = CompletableDeferred<Unit>()
 
@@ -129,25 +153,68 @@ class MainViewModel(
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
-            MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
+            MainServiceEvent.StateNotRunning -> {
+                stopConfirmationDeferred?.complete(Unit)
+                updateRunningState(false, clearTestingText = false)
+            }
             MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
+                val activeId = uiState.value.connectionUi.selectedConfigId ?: uiState.value.selectedGuid
+                if (!activeId.isNullOrBlank()) {
+                    dataSource.recordNodeConnectionOutcome(activeId, succeeded = true)
+                    dataSource.setLastActiveConfigId(activeId)
+                }
+                dataSource.sendMsg2Service(AppConfig.MSG_REGISTER_CLIENT, "")
                 updateRunningState(true)
             }
 
             is MainServiceEvent.StateStartFailure -> {
-                if (!event.message.isNullOrBlank()) {
+                val activeId = uiState.value.connectionUi.selectedConfigId ?: uiState.value.selectedGuid
+                if (!activeId.isNullOrBlank()) {
+                    dataSource.recordNodeConnectionOutcome(activeId, succeeded = false)
+                }
+                val failureMessage = if (!event.message.isNullOrBlank()) {
                     toastError(event.message)
+                    event.message
                 } else {
                     toastError(R.string.toast_services_failure)
+                    dataSource.getString(R.string.toast_services_failure)
                 }
+                updateRunningState(false, clearTestingText = true, failureMessage = failureMessage)
+            }
+
+            MainServiceEvent.StateStopSuccess -> {
+                stopConfirmationDeferred?.complete(Unit)
                 updateRunningState(false)
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            is MainServiceEvent.TrafficSpeed -> {
+                _uiState.update { state ->
+                    val connected = state.isRunning ||
+                        state.connectionUi.connectionStatus == ConnectionStatus.CONNECTED
+                    if (!connected) {
+                        state
+                    } else {
+                        state.copy(
+                            connectionUi = state.connectionUi.copy(
+                                downloadSpeedBytesPerSec = event.stat.downloadBytesPerSec.coerceAtLeast(0L),
+                                uploadSpeedBytesPerSec = event.stat.uploadBytesPerSec.coerceAtLeast(0L),
+                            )
+                        )
+                    }
+                }
+            }
+
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning) return
-                _uiState.update { it.copy(isTesting = false, status = MainStatus.ConnectionTest(event.result)) }
+                _uiState.update { state ->
+                    val updatedPing = event.result.delayMillis.takeIf { it > 0L } ?: state.connectionUi.lastPingMs
+                    state.copy(
+                        isTesting = false,
+                        status = MainStatus.ConnectionTest(event.result),
+                        connectionUi = state.connectionUi.copy(lastPingMs = updatedPing),
+                    )
+                }
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
@@ -302,7 +369,15 @@ class MainViewModel(
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
 
-            MainAction.ToggleService,
+            MainAction.ToggleService -> handleConnectionRequest(uiState.value.connectionUi.activeMode)
+            is MainAction.SelectConnectionMode -> selectConnectionMode(action.mode)
+            MainAction.ConnectNormal -> handleConnectionRequest(ConnectionMode.NORMAL)
+            MainAction.ConnectBoost -> handleConnectionRequest(ConnectionMode.BOOST)
+            MainAction.CancelBoostScan -> cancelBoostScan()
+            MainAction.ClearStatusMessage -> {
+                _uiState.update { it.copy(connectionUi = it.connectionUi.copy(statusMessage = null)) }
+            }
+
             MainAction.TestCurrentServer,
             MainAction.ImportQRcode,
             MainAction.ImportClipboard,
@@ -313,7 +388,8 @@ class MainViewModel(
             is MainAction.EditServer,
             is MainAction.ShareClipboard,
             is MainAction.ShareFullContent,
-            is MainAction.OpenSubscriptionLink -> {
+            is MainAction.OpenSubscriptionLink,
+            MainAction.OpenVipBot -> {
                 // Handled by Activity via its onAction lambda
             }
         }
@@ -339,7 +415,8 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 confirmRemove = dataSource.getConfirmRemove(),
-                doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+                doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+                rgbBorderEnabled = dataSource.getRgbBorderEnabled()
             )
         }
     }
@@ -470,11 +547,19 @@ class MainViewModel(
                 groupServerFlows.keys.removeAll { it !in validIds }
                 groupLoadMutexes.keys.removeAll { it !in validIds }
 
+                val refreshedGuid = dataSource.getSelectServer()
+                val activeGuid = refreshedGuid ?: dataSource.getLastActiveConfigId()
                 _uiState.update {
                     it.copy(
                         groups = groups,
                         selectedGroupId = selectedGroup,
-                        selectedGuid = dataSource.getSelectServer(),
+                        selectedGuid = refreshedGuid,
+                        connectionUi = it.connectionUi.copy(
+                            selectedConfigId = activeGuid ?: it.connectionUi.selectedConfigId,
+                            activeConfigSummary = dataSource.getActiveConfigSummary(
+                                activeGuid ?: it.connectionUi.selectedConfigId
+                            ),
+                        ),
                     )
                 }
                 groups.forEach { mutableServerGroupState(it.id) }
@@ -776,13 +861,43 @@ class MainViewModel(
         }
     }
 
-    fun updateSelectedGuid(guid: String) {
+    fun updateSelectedGuid(guid: String, asManualNormal: Boolean = false) {
         dataSource.setSelectServer(guid)
-        _uiState.update { it.copy(selectedGuid = guid) }
+        dataSource.setLastActiveConfigId(guid)
+        if (asManualNormal) {
+            dataSource.setPersistedConnectionMode(ConnectionMode.NORMAL)
+        }
+        val summary = dataSource.getActiveConfigSummary(guid)
+        val cachedPing = dataSource.resolveNodeLatency(guid)
+        _uiState.update { state ->
+            state.copy(
+                selectedGuid = guid,
+                connectionUi = state.connectionUi.copy(
+                    activeMode = if (asManualNormal) ConnectionMode.NORMAL else state.connectionUi.activeMode,
+                    selectedConfigId = guid,
+                    activeConfigSummary = summary,
+                    lastPingMs = if (!state.isRunning || asManualNormal) cachedPing else state.connectionUi.lastPingMs,
+                    statusMessage = null,
+                ),
+            )
+        }
     }
 
     fun refreshSelectedGuid() {
-        _uiState.update { it.copy(selectedGuid = dataSource.getSelectServer()) }
+        val guid = dataSource.getSelectServer()
+        val effectiveGuid = guid ?: dataSource.getLastActiveConfigId()
+        val summary = dataSource.getActiveConfigSummary(effectiveGuid)
+        val cachedPing = effectiveGuid?.let { dataSource.resolveNodeLatency(it) }
+        _uiState.update { state ->
+            state.copy(
+                selectedGuid = guid,
+                connectionUi = state.connectionUi.copy(
+                    selectedConfigId = effectiveGuid,
+                    activeConfigSummary = summary,
+                    lastPingMs = cachedPing,
+                ),
+            )
+        }
     }
 
     fun removeServerAndRefresh(guid: String) {
@@ -927,15 +1042,392 @@ class MainViewModel(
         _uiState.update { it.copy(locateTarget = null) }
     }
 
+    // ---------- Connection orchestration (Normal & Boost) ----------
+    fun selectConnectionMode(targetMode: ConnectionMode) {
+        val current = uiState.value
+        when (
+            val decision = planModeTabSelection(
+                currentStatus = current.connectionUi.connectionStatus,
+                activeMode = current.connectionUi.activeMode,
+                targetMode = targetMode,
+                selectedConfigId = current.selectedGuid,
+                lastActiveConfigId = dataSource.getLastActiveConfigId(),
+            )
+        ) {
+            ModeTabSelectionDecision.IgnoreBusy,
+            ModeTabSelectionDecision.NoChange -> return
+
+            is ModeTabSelectionDecision.SwitchTabOnly -> {
+                dataSource.setPersistedConnectionMode(decision.mode)
+                _uiState.update { state ->
+                    state.copy(
+                        connectionUi = state.connectionUi.copy(
+                            activeMode = decision.mode,
+                            connectionStatus = if (state.connectionUi.connectionStatus == ConnectionStatus.ERROR) {
+                                ConnectionStatus.DISCONNECTED
+                            } else {
+                                state.connectionUi.connectionStatus
+                            },
+                            statusMessage = null,
+                        )
+                    )
+                }
+            }
+
+            ModeTabSelectionDecision.PromptSelectConfig -> {
+                val prompt = dataSource.getString(R.string.connection_select_config_first)
+                toast(prompt)
+                _uiState.update { state ->
+                    state.copy(
+                        connectionUi = state.connectionUi.copy(
+                            statusMessage = prompt,
+                        )
+                    )
+                }
+            }
+
+            is ModeTabSelectionDecision.SwitchToNormal -> {
+                transitionJob?.cancel()
+                transitionJob = viewModelScope.launch {
+                    disconnectAndAwaitStop()
+                    startSelectedConfig(decision.configId, ConnectionMode.NORMAL)
+                }
+            }
+
+            ModeTabSelectionDecision.SwitchToBoost -> {
+                launchBoostSelection(disconnectExistingFirst = true)
+            }
+        }
+    }
+
+    fun handleConnectionRequest(targetMode: ConnectionMode) {
+        val current = uiState.value
+        when (
+            val decision = planConnectionAction(
+                currentStatus = current.connectionUi.connectionStatus,
+                activeMode = current.connectionUi.activeMode,
+                targetMode = targetMode,
+                selectedConfigId = current.selectedGuid,
+                lastActiveConfigId = dataSource.getLastActiveConfigId(),
+            )
+        ) {
+            ConnectionTransitionDecision.IgnoreBusy -> return
+
+            ConnectionTransitionDecision.PromptSelectConfig -> {
+                val prompt = dataSource.getString(R.string.connection_select_config_first)
+                toast(prompt)
+                _uiState.update {
+                    it.copy(
+                        connectionUi = it.connectionUi.copy(
+                            activeMode = ConnectionMode.NORMAL,
+                            statusMessage = prompt,
+                        )
+                    )
+                }
+            }
+
+            is ConnectionTransitionDecision.ConnectNormal -> {
+                startSelectedConfig(decision.configId, ConnectionMode.NORMAL)
+            }
+
+            is ConnectionTransitionDecision.SwitchToNormal -> {
+                transitionJob?.cancel()
+                transitionJob = viewModelScope.launch {
+                    disconnectAndAwaitStop()
+                    startSelectedConfig(decision.configId, ConnectionMode.NORMAL)
+                }
+            }
+
+            ConnectionTransitionDecision.ScanAndConnectBoost -> {
+                launchBoostSelection(disconnectExistingFirst = false)
+            }
+
+            ConnectionTransitionDecision.SwitchToBoost -> {
+                launchBoostSelection(disconnectExistingFirst = true)
+            }
+
+            ConnectionTransitionDecision.Disconnect -> {
+                disconnectActiveTunnel()
+            }
+        }
+    }
+
+    private fun startSelectedConfig(configId: String, mode: ConnectionMode) {
+        dataSource.setSelectServer(configId)
+        dataSource.setLastActiveConfigId(configId)
+        dataSource.setPersistedConnectionMode(mode)
+        val summary = dataSource.getActiveConfigSummary(configId)
+        val cachedPing = dataSource.resolveNodeLatency(configId)
+
+        _uiState.update { state ->
+            state.copy(
+                selectedGuid = configId,
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = ConnectionStatus.CONNECTING,
+                    activeMode = mode,
+                    selectedConfigId = configId,
+                    activeConfigSummary = summary ?: state.connectionUi.activeConfigSummary,
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    lastPingMs = cachedPing ?: state.connectionUi.lastPingMs,
+                    scanProgress = null,
+                    statusMessage = null,
+                ),
+            )
+        }
+        activeProxyEngine.connect(configId, mode)
+    }
+
+    private fun disconnectActiveTunnel() {
+        boostScanJob?.cancel()
+        boostScanJob = null
+        transitionJob?.cancel()
+        _uiState.update { state ->
+            state.copy(
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = ConnectionStatus.DISCONNECTING,
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    scanProgress = null,
+                    statusMessage = null,
+                )
+            )
+        }
+        activeProxyEngine.disconnect()
+    }
+
+    private suspend fun disconnectAndAwaitStop() {
+        val deferred = CompletableDeferred<Unit>()
+        stopConfirmationDeferred = deferred
+        _uiState.update { state ->
+            state.copy(
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = ConnectionStatus.DISCONNECTING,
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    scanProgress = null,
+                    statusMessage = null,
+                )
+            )
+        }
+        activeProxyEngine.disconnect()
+        withTimeoutOrNull(STOP_CONFIRMATION_TIMEOUT_MS) {
+            deferred.await()
+        }
+        if (stopConfirmationDeferred === deferred) {
+            stopConfirmationDeferred = null
+        }
+    }
+
+    private fun launchBoostSelection(disconnectExistingFirst: Boolean) {
+        if (boostScanJob?.isActive == true) return
+        transitionJob?.cancel()
+        boostScanJob = viewModelScope.launch {
+            try {
+                if (disconnectExistingFirst) {
+                    disconnectAndAwaitStop()
+                }
+                ensureActive()
+
+                dataSource.setPersistedConnectionMode(ConnectionMode.BOOST)
+                _uiState.update { state ->
+                    state.copy(
+                        connectionUi = state.connectionUi.copy(
+                            connectionStatus = ConnectionStatus.SCANNING_BOOST,
+                            activeMode = ConnectionMode.BOOST,
+                            downloadSpeedBytesPerSec = 0L,
+                            uploadSpeedBytesPerSec = 0L,
+                            scanProgress = BoostScanProgress(),
+                            statusMessage = dataSource.getString(R.string.connection_boost_scanning),
+                        )
+                    )
+                }
+
+                val groups = withContext(ioDispatcher) {
+                    dataSource.getBoostSubscriptionGroups()
+                }
+                ensureActive()
+
+                val outcome = boostSelectorEngine.selectBestNode(
+                    subscriptions = groups,
+                    preferredFallbackConfigId = uiState.value.selectedGuid ?: dataSource.getLastActiveConfigId(),
+                    onProgress = { progress ->
+                        _uiState.update { state ->
+                            if (state.connectionUi.connectionStatus != ConnectionStatus.SCANNING_BOOST) {
+                                state
+                            } else {
+                                state.copy(
+                                    connectionUi = state.connectionUi.copy(
+                                        scanProgress = progress,
+                                        lastPingMs = progress.bestCandidateLatencyMs ?: state.connectionUi.lastPingMs,
+                                    )
+                                )
+                            }
+                        }
+                    },
+                )
+                ensureActive()
+
+                when (outcome) {
+                    BoostSelectionOutcome.EmptyPool -> {
+                        val emptyMessage = dataSource.getString(R.string.connection_boost_empty_pool)
+                        toast(emptyMessage)
+                        _uiState.update { state ->
+                            state.copy(
+                                connectionUi = state.connectionUi.copy(
+                                    connectionStatus = ConnectionStatus.DISCONNECTED,
+                                    scanProgress = null,
+                                    statusMessage = emptyMessage,
+                                )
+                            )
+                        }
+                    }
+
+                    is BoostSelectionOutcome.Selected -> {
+                        val winner = outcome.winner
+                        val node = winner.node
+                        val chosenMessage = dataSource.getString(
+                            R.string.connection_boost_selected_format,
+                            node.name,
+                            node.subscriptionName,
+                            winner.medianLatencyMs,
+                        )
+                        toastSuccess(chosenMessage)
+                        applyBoostNodeAndConnect(node, winner.medianLatencyMs, chosenMessage)
+                    }
+
+                    is BoostSelectionOutcome.FallbackSelected -> {
+                        val node = outcome.fallbackNode
+                        val fallbackMessage = dataSource.getString(
+                            R.string.connection_boost_fallback_format,
+                            node.name,
+                            node.subscriptionName,
+                        )
+                        toast(fallbackMessage)
+                        applyBoostNodeAndConnect(node, node.cachedLatencyMs.takeIf { it > 0L }, fallbackMessage)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Boost selection failed", error)
+                val failMessage = dataSource.getString(R.string.toast_services_failure)
+                toastError(failMessage)
+                _uiState.update { state ->
+                    state.copy(
+                        connectionUi = state.connectionUi.copy(
+                            connectionStatus = ConnectionStatus.ERROR,
+                            scanProgress = null,
+                            statusMessage = failMessage,
+                        )
+                    )
+                }
+            } finally {
+                boostScanJob = null
+            }
+        }
+    }
+
+    private fun applyBoostNodeAndConnect(
+        node: ProxyNode,
+        latencyMs: Long?,
+        statusMessage: String,
+    ) {
+        dataSource.setSelectServer(node.id)
+        dataSource.setLastActiveConfigId(node.id)
+        dataSource.setPersistedConnectionMode(ConnectionMode.BOOST)
+
+        _uiState.update { state ->
+            state.copy(
+                selectedGuid = node.id,
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = ConnectionStatus.CONNECTING,
+                    activeMode = ConnectionMode.BOOST,
+                    selectedConfigId = node.id,
+                    activeConfigSummary = node.toActiveSummary(),
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    lastPingMs = latencyMs,
+                    scanProgress = null,
+                    statusMessage = statusMessage,
+                ),
+            )
+        }
+        activeProxyEngine.connect(node.id, ConnectionMode.BOOST)
+    }
+
+    fun cancelBoostScan() {
+        val activeJob = boostScanJob ?: return
+        activeJob.cancel()
+        boostScanJob = null
+        dataSource.cancelAllPing()
+        _uiState.update { state ->
+            state.copy(
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = if (state.isRunning) ConnectionStatus.CONNECTED else ConnectionStatus.DISCONNECTED,
+                    scanProgress = null,
+                    statusMessage = dataSource.getString(R.string.connection_boost_cancelled),
+                )
+            )
+        }
+    }
+
+    fun onStartAborted(reason: String? = null) {
+        _uiState.update { state ->
+            state.copy(
+                isRunning = false,
+                connectionUi = state.connectionUi.copy(
+                    connectionStatus = ConnectionStatus.DISCONNECTED,
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    scanProgress = null,
+                    statusMessage = reason,
+                ),
+            )
+        }
+    }
+
     // ---------- Running state ----------
-    private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
+    private fun updateRunningState(
+        running: Boolean,
+        clearTestingText: Boolean = true,
+        failureMessage: String? = null,
+    ) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
         _uiState.update { state ->
+            val currentConn = state.connectionUi
+            val isScanningNow = currentConn.connectionStatus == ConnectionStatus.SCANNING_BOOST &&
+                boostScanJob?.isActive == true
+            val resolvedStatus = when {
+                running -> ConnectionStatus.CONNECTED
+                failureMessage != null -> ConnectionStatus.ERROR
+                isScanningNow -> ConnectionStatus.SCANNING_BOOST
+                else -> ConnectionStatus.DISCONNECTED
+            }
+            val effectiveConfigId = state.selectedGuid
+                ?: currentConn.selectedConfigId
+                ?: dataSource.getLastActiveConfigId()
+            val summary = currentConn.activeConfigSummary
+                ?.takeIf { it.configId == effectiveConfigId }
+                ?: dataSource.getActiveConfigSummary(effectiveConfigId)
+
             state.copy(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
                 status = if (!clearTestingText && state.isRunning == running) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                connectionUi = currentConn.copy(
+                    connectionStatus = resolvedStatus,
+                    selectedConfigId = effectiveConfigId,
+                    activeConfigSummary = summary,
+                    downloadSpeedBytesPerSec = if (running) currentConn.downloadSpeedBytesPerSec else 0L,
+                    uploadSpeedBytesPerSec = if (running) currentConn.uploadSpeedBytesPerSec else 0L,
+                    statusMessage = when {
+                        failureMessage != null -> failureMessage
+                        running && currentConn.connectionStatus == ConnectionStatus.CONNECTING -> null
+                        else -> currentConn.statusMessage
+                    },
+                ),
             )
         }
     }
@@ -946,6 +1438,8 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
+        boostScanJob?.cancel()
+        transitionJob?.cancel()
         cancelAllPing()
         dataSource.close()
         super.onCleared()
@@ -964,5 +1458,29 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+        const val STOP_CONFIRMATION_TIMEOUT_MS = 2_500L
+
+        fun buildInitialUiState(dataSource: MainDataSource): MainUiState {
+            val selectedGuid = dataSource.getSelectServer()
+            val lastActiveConfigId = dataSource.getLastActiveConfigId()
+            val effectiveGuid = selectedGuid ?: lastActiveConfigId
+            val activeMode = dataSource.getPersistedConnectionMode()
+            return MainUiState(
+                selectedGroupId = dataSource.getSelectedSubscriptionId(),
+                selectedGuid = selectedGuid,
+                confirmRemove = dataSource.getConfirmRemove(),
+                doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+                rgbBorderEnabled = dataSource.getRgbBorderEnabled(),
+                connectionUi = ConnectionUiState(
+                    connectionStatus = ConnectionStatus.DISCONNECTED,
+                    activeMode = activeMode,
+                    selectedConfigId = effectiveGuid,
+                    activeConfigSummary = dataSource.getActiveConfigSummary(effectiveGuid),
+                    downloadSpeedBytesPerSec = 0L,
+                    uploadSpeedBytesPerSec = 0L,
+                    lastPingMs = effectiveGuid?.let { dataSource.resolveNodeLatency(it) },
+                ),
+            )
+        }
     }
 }

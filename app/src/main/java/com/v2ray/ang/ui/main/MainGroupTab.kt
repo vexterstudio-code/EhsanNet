@@ -73,7 +73,6 @@ fun GroupTabBar(
 ) {
     val selectedIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
     val colors = MaterialTheme.colorScheme
-    // The plain surface color equals the screen background in dark mode, so the bar needs its own tone there.
     val dark = colors.surface.luminance() < 0.5f
 
     Surface(
@@ -81,9 +80,9 @@ fun GroupTabBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         shape = CircleShape,
-        color = if (dark) colors.surfaceContainerHigh else colors.surface,
-        border = BorderStroke(0.5.dp, colors.outlineVariant.copy(alpha = if (dark) 0.6f else 0.35f)),
-        shadowElevation = 3.dp
+        color = if (dark) colors.surfaceContainerLow else colors.surfaceContainerLowest,
+        border = BorderStroke(1.dp, if (dark) colors.outlineVariant.copy(alpha = 0.7f) else colors.outlineVariant.copy(alpha = 0.65f)),
+        shadowElevation = 2.dp
     ) {
         BoxWithConstraints {
             val barPaddingPx = with(LocalDensity.current) { TAB_BAR_PADDING.roundToPx() }

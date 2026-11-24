@@ -12,6 +12,7 @@ import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.RealPingResult
 import com.v2ray.ang.dto.SubscriptionUpdateResult
 import com.v2ray.ang.dto.TestServiceMessage
+import com.v2ray.ang.dto.TrafficSpeedStat
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.ServerAffiliationInfo
 import com.v2ray.ang.dto.entities.SubscriptionCache
@@ -25,9 +26,14 @@ import com.v2ray.ang.handler.SubscriptionUpdater
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainRepository(
@@ -41,8 +47,15 @@ class MainRepository(
 
     // Probe results are finite and must remain lossless until the ViewModel coalesces them.
     private val mainServiceEventChannel = Channel<MainServiceEvent>(Channel.UNLIMITED)
+    private val _serviceEvents = MutableSharedFlow<MainServiceEvent>(
+        replay = 0,
+        extraBufferCapacity = 512,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    private val nodeFailureCounts = ConcurrentHashMap<String, Int>()
 
     override val mainServiceEvent: Flow<MainServiceEvent> = mainServiceEventChannel.receiveAsFlow()
+    override val serviceEvents: SharedFlow<MainServiceEvent> = _serviceEvents.asSharedFlow()
 
     private val serviceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -57,6 +70,10 @@ class MainRepository(
                 )
 
                 AppConfig.MSG_STATE_STOP_SUCCESS -> MainServiceEvent.StateStopSuccess
+                AppConfig.MSG_TRAFFIC_STATS -> safeIntent
+                    .serializable<TrafficSpeedStat>("content")
+                    ?.let { MainServiceEvent.TrafficSpeed(it) }
+
                 AppConfig.MSG_MEASURE_DELAY_RESULT -> safeIntent
                     .serializable<ConnectionTestResult>("content")
                     ?.let { MainServiceEvent.MeasureDelayResult(it, requestId) }
@@ -76,7 +93,10 @@ class MainRepository(
 
                 else -> null
             }
-            event?.let { mainServiceEventChannel.trySend(it) }
+            event?.let {
+                _serviceEvents.tryEmit(it)
+                mainServiceEventChannel.trySend(it)
+            }
         }
     }
 
@@ -116,11 +136,127 @@ class MainRepository(
 
     override fun setSelectServer(guid: String) = MmkvManager.setSelectServer(guid)
 
+    override fun getPersistedConnectionMode(): ConnectionMode = ConnectionMode.fromPref(
+        MmkvManager.decodeSettingsString(AppConfig.PREF_CONNECTION_MODE, ConnectionMode.NORMAL.prefValue)
+    )
+
+    override fun setPersistedConnectionMode(mode: ConnectionMode) {
+        MmkvManager.encodeSettings(AppConfig.PREF_CONNECTION_MODE, mode.prefValue)
+    }
+
+    override fun getLastActiveConfigId(): String? =
+        MmkvManager.decodeSettingsString(AppConfig.PREF_LAST_ACTIVE_CONFIG_ID, null)
+            ?.takeIf { it.isNotBlank() }
+
+    override fun setLastActiveConfigId(guid: String?) {
+        MmkvManager.encodeSettings(AppConfig.PREF_LAST_ACTIVE_CONFIG_ID, guid.orEmpty())
+    }
+
+    override fun getBoostSubscriptionGroups(): List<SubscriptionGroup> {
+        val standaloneTitle = localizedContext.getString(R.string.connection_standalone_group)
+        val subs = MmkvManager.decodeSubscriptions()
+        val result = ArrayList<SubscriptionGroup>(subs.size + 1)
+        val coveredGroupIds = HashSet<String>(subs.size + 1)
+        var orderCounter = 0
+
+        fun buildNodes(guids: List<String>, subId: String, subName: String): List<ProxyNode> =
+            guids.mapNotNull { guid ->
+                val profile = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
+                val affiliation = MmkvManager.decodeServerAffiliationInfo(guid)
+                ProxyNode(
+                    id = guid,
+                    name = profile.remarks.ifBlank { profile.server.orEmpty().ifBlank { guid } },
+                    protocolTag = formatProtocolTag(profile),
+                    serverAddress = profile.server.orEmpty(),
+                    port = profile.serverPort?.toIntOrNull(),
+                    subscriptionId = subId,
+                    subscriptionName = subName,
+                    cachedLatencyMs = affiliation?.testDelayMillis ?: 0L,
+                    recentFailureCount = nodeFailureCounts[guid] ?: 0,
+                    priorityOrder = orderCounter++,
+                )
+            }
+
+        subs.forEach { subCache ->
+            val subId = subCache.guid
+            coveredGroupIds.add(subId)
+            val subName = subCache.subscription.remarks.ifBlank { standaloneTitle }
+            val nodes = buildNodes(MmkvManager.decodeServerList(subId), subId, subName)
+            if (nodes.isNotEmpty()) {
+                result += SubscriptionGroup(
+                    id = subId,
+                    name = subName,
+                    isEnabled = subCache.subscription.enabled,
+                    nodes = nodes,
+                )
+            }
+        }
+
+        if (AppConfig.DEFAULT_SUBSCRIPTION_ID !in coveredGroupIds) {
+            val standaloneNodes = buildNodes(
+                guids = MmkvManager.decodeServerList(AppConfig.DEFAULT_SUBSCRIPTION_ID),
+                subId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
+                subName = standaloneTitle,
+            )
+            if (standaloneNodes.isNotEmpty()) {
+                result += SubscriptionGroup(
+                    id = AppConfig.DEFAULT_SUBSCRIPTION_ID,
+                    name = standaloneTitle,
+                    isEnabled = true,
+                    nodes = standaloneNodes,
+                )
+            }
+        }
+
+        return result
+    }
+
+    override fun getActiveConfigSummary(guid: String?): ActiveConfigSummary? {
+        if (guid.isNullOrBlank()) return null
+        val profile = MmkvManager.decodeServerConfig(guid) ?: return null
+        val subId = profile.subscriptionId
+        val subName = if (subId.isNotBlank()) {
+            MmkvManager.decodeSubscription(subId)?.remarks?.takeIf { it.isNotBlank() }
+        } else {
+            null
+        } ?: localizedContext.getString(R.string.connection_standalone_group)
+
+        return ActiveConfigSummary(
+            configId = guid,
+            name = profile.remarks.ifBlank { profile.server.orEmpty().ifBlank { guid } },
+            protocolTag = formatProtocolTag(profile),
+            subscriptionId = subId,
+            subscriptionName = subName,
+        )
+    }
+
+    override fun resolveNodeLatency(guid: String): Long? =
+        MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis?.takeIf { it > 0L }
+
+    override fun recordNodeConnectionOutcome(guid: String, succeeded: Boolean) {
+        if (guid.isBlank()) return
+        if (succeeded) {
+            nodeFailureCounts.remove(guid)
+        } else {
+            nodeFailureCounts.compute(guid) { _, prev -> ((prev ?: 0) + 1).coerceAtMost(5) }
+        }
+    }
+
+    private fun formatProtocolTag(profile: ProfileItem): String {
+        val type = profile.configType.name
+        val transport = profile.network?.takeIf { it.isNotBlank() }
+        val security = profile.security?.takeIf { it.isNotBlank() && it != "none" }
+        return listOfNotNull(type, transport, security).joinToString(" / ")
+    }
+
     override fun getConfirmRemove(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
     override fun getDoubleColumnDisplay(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, false)
+
+    override fun getRgbBorderEnabled(): Boolean =
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_RGB_BORDER_ENABLED, true)
 
     override fun isGroupAllDisplayEnabled(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_GROUP_ALL_DISPLAY)
@@ -221,7 +357,11 @@ class MainRepository(
 
     override fun testCurrentServerRealPing(requestId: String) {
         MessageHelper.sendMsg2ServiceForResult(app, AppConfig.MSG_MEASURE_DELAY, requestId) { handled ->
-            if (!handled) mainServiceEventChannel.trySend(MainServiceEvent.MeasureDelayCancelled(requestId))
+            if (!handled) {
+                val cancelled = MainServiceEvent.MeasureDelayCancelled(requestId)
+                _serviceEvents.tryEmit(cancelled)
+                mainServiceEventChannel.trySend(cancelled)
+            }
         }
     }
 

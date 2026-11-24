@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
-    <string name="app_widget_name">v2rayNG</string>
-    <string name="app_tile_name">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
+    <string name="app_widget_name">EhsanNet</string>
+    <string name="app_tile_name">EhsanNet</string>
     <string name="app_tile_first_use">Добавьте профиль в приложении перед использованием этой функции.</string>
     <string name="navigation_drawer_open">Открыть панель навигации</string>
     <string name="navigation_drawer_close">Закрыть панель навигации</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">Потяните вниз для обновления!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">Служба v2rayNG</string>
+    <string name="notification_channel_service">Служба EhsanNet</string>
     <string name="notification_channel_subscription_updates">Обновления подписок</string>
     <string name="notification_channel_connection_checks">Проверки соединения</string>
     <string name="notification_action_stop_v2ray">Остановить</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">Тема интерфейса</string>
     <string name="title_pref_dynamic_color">Динамические цвета</string>
     <string name="summary_pref_dynamic_color">Работает только на Android 12+</string>
+    <string name="title_pref_rgb_border_enabled">RGB-рамка при подключении</string>
+    <string name="summary_pref_rgb_border_enabled">Показывать анимированную RGB-подсветку по краям экрана при активном подключении</string>
     <string name="title_pref_use_hev_tunnel">Использовать Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">Если включено, TUN будет использовать hev-socks5-tunnel; иначе будет использован xray-core</string>
     <string name="title_pref_hev_tunnel_loglevel">Уровень журналирования Hev TUN</string>
@@ -578,5 +580,28 @@
     <string name="sub_info_open_support">Открыть ссылку поддержки</string>
     <string name="sub_info_open_page">Открыть страницу подписки</string>
     <string name="sub_info_unlimited">Без ограничений</string>
+    <string name="acc_vip">Открыть VIP-бот</string>
+    <string name="empty_servers_hint">Нажмите + вверху, чтобы добавить или импортировать профиль</string>
+    <string name="connection_mode_normal">Обычный</string>
+    <string name="connection_mode_boost">Ускорение</string>
+    <string name="connection_mode_normal_desc">Выбор вручную</string>
+    <string name="connection_mode_boost_desc">Лучший сервер</string>
+    <string name="connection_boost_scanning">Поиск лучшего сервера…</string>
+    <string name="connection_boost_scanning_progress">Проверка %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">Нет активных профилей. Добавьте или включите подписку.</string>
+    <string name="connection_boost_selected_format">Ускорение: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">Резерв: %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">Поиск отменён</string>
+    <string name="connection_select_config_first">Сначала выберите конфигурацию</string>
+    <string name="connection_standalone_group">Локальные</string>
+    <string name="connection_connecting_label">Подключение…</string>
+    <string name="connection_disconnecting_label">Отключение…</string>
+    <string name="connection_disconnect_action">Отключить</string>
+    <string name="connection_tap_to_ping">Нажмите для пинга</string>
+    <string name="acc_download_speed">Скорость загрузки: %1$s</string>
+    <string name="acc_upload_speed">Скорость отдачи: %1$s</string>
+    <string name="acc_cancel_boost">Отменить поиск</string>
+    <string name="acc_connect_normal">Обычное подключение</string>
+    <string name="acc_connect_boost">Умное подключение</string>
 
 </resources>

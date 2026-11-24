@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">Keçid</string>
     <string name="app_tile_name">Keçid</string>
     <string name="app_tile_first_use">Bu funksiyanı istifadə etməzdən əvvəl tətbiqə profil əlavə edin.</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">Yeniləmək üçün aşağı çəkin!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">v2rayNG xidməti</string>
+    <string name="notification_channel_service">EhsanNet xidməti</string>
     <string name="notification_channel_subscription_updates">Abunəlik yenilənmələri</string>
     <string name="notification_channel_connection_checks">Bağlantı yoxlamaları</string>
     <string name="notification_action_stop_v2ray">Dayandır</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">İstifadəçi interfeysi rejim tənzimləmələri</string>
     <string name="title_pref_dynamic_color">Dinamik rəngi aktivləşdir</string>
     <string name="summary_pref_dynamic_color">Yalnız Android 12+ cihazlarında işləyir</string>
+    <string name="title_pref_rgb_border_enabled">Qoşulma zamanı RGB çərçivə</string>
+    <string name="summary_pref_rgb_border_enabled">Qoşulu olduqda ekranın ətrafında animasiyalı RGB işıq zolağı göstər</string>
     <string name="title_pref_use_hev_tunnel">Hev TUN istifadə et</string>
     <string name="summary_pref_use_hev_tunnel">Aktiv edildikdə TUN hev-socks5-tunnel istifadə edəcək; əks halda xray-core istifadə olunacaq.</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN jurnal səviyyəsi</string>
@@ -575,5 +577,28 @@
     <string name="sub_info_open_page">Abunəlik səhifəsini aç</string>
     <string name="sub_info_traffic" translatable="false">%1$s / %2$s</string>
     <string name="sub_info_unlimited">Limitsiz</string>
+    <string name="acc_vip">VIP botunu açın</string>
+    <string name="empty_servers_hint">Konfiqurasiya əlavə etmək üçün yuxarıdakı + düyməsinə toxunun</string>
+    <string name="connection_mode_normal">Normal</string>
+    <string name="connection_mode_boost">Boost</string>
+    <string name="connection_mode_normal_desc">Əllə seçim</string>
+    <string name="connection_mode_boost_desc">Ən yaxşı server</string>
+    <string name="connection_boost_scanning">Ən yaxşı server axtarılır…</string>
+    <string name="connection_boost_scanning_progress">Yoxlanılır %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">Aktiv konfiqurasiya tapılmadı. Əvvəlcə abunəlik əlavə edin.</string>
+    <string name="connection_boost_selected_format">Boost: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">Boost ehtiyat: %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">Boost axtarışı ləğv edildi</string>
+    <string name="connection_select_config_first">Zəhmət olmasa əvvəlcə konfiqurasiya seçin</string>
+    <string name="connection_standalone_group">Yerli</string>
+    <string name="connection_connecting_label">Qoşulur…</string>
+    <string name="connection_disconnecting_label">Ayrılır…</string>
+    <string name="connection_disconnect_action">Ayır</string>
+    <string name="connection_tap_to_ping">Ping üçün toxunun</string>
+    <string name="acc_download_speed">Endirmə sürəti: %1$s</string>
+    <string name="acc_upload_speed">Yükləmə sürəti: %1$s</string>
+    <string name="acc_cancel_boost">Boost axtarışını ləğv et</string>
+    <string name="acc_connect_normal">Normal qoşulma</string>
+    <string name="acc_connect_boost">Boost qoşulma</string>
 
 </resources>

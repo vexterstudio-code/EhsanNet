@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">Please pull down to refresh!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">v2rayNG service</string>
+    <string name="notification_channel_service">EhsanNet service</string>
     <string name="notification_channel_subscription_updates">Subscription updates</string>
     <string name="notification_channel_connection_checks">Connection checks</string>
     <string name="notification_action_stop_v2ray">Stop</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">UI mode settings</string>
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
+    <string name="title_pref_rgb_border_enabled">RGB connection border</string>
+    <string name="summary_pref_rgb_border_enabled">Show an animated RGB glowing border around the screen while connected</string>
     <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">When enabled, TUN will use hev-socks5-tunnel; otherwise, it will use xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN log level</string>
@@ -575,5 +577,29 @@
     <string name="sub_info_open_page">Open subscription page</string>
     <string name="sub_info_traffic" translatable="false">%1$s / %2$s</string>
     <string name="sub_info_unlimited">Unlimited</string>
+    <string name="title_vip" translatable="false">VIP</string>
+    <string name="acc_vip">Open VIP Telegram bot</string>
+    <string name="empty_servers_hint">Tap + at the top right to import or add a config</string>
+    <string name="connection_mode_normal">Normal</string>
+    <string name="connection_mode_boost">Boost</string>
+    <string name="connection_mode_normal_desc">Manual config</string>
+    <string name="connection_mode_boost_desc">Auto best node</string>
+    <string name="connection_boost_scanning">Scanning best node…</string>
+    <string name="connection_boost_scanning_progress">Scanning %1$d/%2$d…</string>
+    <string name="connection_boost_empty_pool">No enabled configs found. Add or enable a subscription first.</string>
+    <string name="connection_boost_selected_format">Boost: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">Boost fallback: %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">Boost scan cancelled</string>
+    <string name="connection_select_config_first">Please select a config first</string>
+    <string name="connection_standalone_group">Local</string>
+    <string name="connection_connecting_label">Connecting…</string>
+    <string name="connection_disconnecting_label">Disconnecting…</string>
+    <string name="connection_disconnect_action">Disconnect</string>
+    <string name="connection_tap_to_ping">Tap to test ping</string>
+    <string name="acc_download_speed">Download speed: %1$s</string>
+    <string name="acc_upload_speed">Upload speed: %1$s</string>
+    <string name="acc_cancel_boost">Cancel boost scan</string>
+    <string name="acc_connect_normal">Normal connection</string>
+    <string name="acc_connect_boost">Boost connection</string>
 
 </resources>

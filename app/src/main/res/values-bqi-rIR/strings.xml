@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">v2rayNG</string>
+    <string name="app_name" translatable="false">EhsanNet</string>
     <string name="app_widget_name">آلشت</string>
     <string name="app_tile_name">آلشت</string>
     <string name="app_tile_first_use">سی کرت ٱولی و کار بوردن ای ویژیی، ٱول ز من برنومه ی سرور ازاف کۊنین</string>
@@ -14,7 +14,7 @@
     <string name="pull_down_to_refresh">سی وانۊ کردن، بلگه ن بلم بکشین!</string>
 
     <!-- Notifications -->
-    <string name="notification_channel_service">سرویس v2rayNG</string>
+    <string name="notification_channel_service">سرویس EhsanNet</string>
     <string name="notification_channel_subscription_updates">ورۊ کردن اشتراکا</string>
     <string name="notification_channel_connection_checks">واجۊری منپیز</string>
     <string name="notification_action_stop_v2ray">واڌاشتن</string>
@@ -319,6 +319,8 @@
     <string name="title_pref_ui_mode_night">سامووا هالت رابت منتوری</string>
     <string name="title_pref_dynamic_color">ره وندن رنگ پۊیا</string>
     <string name="summary_pref_dynamic_color">فقت ری ٱندروید 12+ کار اکونه</string>
+    <string name="title_pref_rgb_border_enabled">نوار RGB وخت وصل بیدن</string>
+    <string name="summary_pref_rgb_border_enabled">نشون دائن نوار نوری RGB دور صفحه وختی که وصلید</string>
     <string name="title_pref_use_hev_tunnel">و کار گرؽڌن ویژیی Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">مجالی ک ره ونده بۊ، TUN ایا hev-socks5-tunnel ن و کار اگره؛ ٱر ره نوۊفته بۊ، همو xray-core ن و کار اگره.</string>
     <string name="title_pref_hev_tunnel_loglevel">سئت گوزارشا Hev TUN</string>
@@ -574,5 +576,28 @@
     <string name="sub_info_open_support">واز کردن لینگ پشتیوانی</string>
     <string name="sub_info_open_page">واز کردن صفحه اطلاعات اشتراک</string>
     <string name="sub_info_unlimited">بی‌حد</string>
+    <string name="acc_vip">واز کردن ربات VIP</string>
+    <string name="empty_servers_hint">سی ٱووردن کانفیگ و ری + م من سر صفحه بزن</string>
+    <string name="connection_mode_normal">نرمال</string>
+    <string name="connection_mode_boost">بوست</string>
+    <string name="connection_mode_normal_desc">پسند دستی</string>
+    <string name="connection_mode_boost_desc">بهترین سرور</string>
+    <string name="connection_boost_scanning">هونی بهترین سروره جستجو اکنه...</string>
+    <string name="connection_boost_scanning_progress">اسکن %1$d ز %2$d...</string>
+    <string name="connection_boost_empty_pool">هیچ کانفیگ فعالی نیس. اول اشتراک اضافه کنین.</string>
+    <string name="connection_boost_selected_format">بوست: %1$s (%2$s · %3$d ms)</string>
+    <string name="connection_boost_fallback_format">بوست (پشتیبان): %1$s (%2$s)</string>
+    <string name="connection_boost_cancelled">اسکن بوست لغو وابی</string>
+    <string name="connection_select_config_first">اول یه کانفیگ پسند کنین</string>
+    <string name="connection_standalone_group">مهلی</string>
+    <string name="connection_connecting_label">هونی وصل ابۊ...</string>
+    <string name="connection_disconnecting_label">هونی قطع ابۊ...</string>
+    <string name="connection_disconnect_action">قطع کردن</string>
+    <string name="connection_tap_to_ping">بزن سی تست پینگ</string>
+    <string name="acc_download_speed">تندی دانلود: %1$s</string>
+    <string name="acc_upload_speed">تندی آپلود: %1$s</string>
+    <string name="acc_cancel_boost">لغو جستجوی بوست</string>
+    <string name="acc_connect_normal">وصل نرمال</string>
+    <string name="acc_connect_boost">وصل بوست</string>
 
 </resources>

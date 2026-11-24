@@ -9,7 +9,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
@@ -60,9 +62,17 @@ class MainActivity : HelperBaseComponentActivity() {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
 
+    private var pendingStartConfigId: String? = null
+
     private val requestVpnPermission =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (it.resultCode == RESULT_OK) startV2Ray()
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val targetConfigId = pendingStartConfigId
+            pendingStartConfigId = null
+            if (result.resultCode == RESULT_OK) {
+                startV2Ray(targetConfigId)
+            } else {
+                mainViewModel.onStartAborted()
+            }
         }
 
     private val profileEditorLauncher =
@@ -96,7 +106,31 @@ class MainActivity : HelperBaseComponentActivity() {
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
 
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                mainViewModel.vpnCommands.collect { command ->
+                    when (command) {
+                        is MainVpnCommand.StartTunnel -> requestServiceStart(command.configId)
+                        MainVpnCommand.StopTunnel -> {
+                            pendingStartConfigId = null
+                            LauncherManager.stopService(this@MainActivity)
+                        }
+                    }
+                }
+            }
+        }
+
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    override fun onStart() {
+        super.onStart()
+        com.v2ray.ang.helper.MessageHelper.sendMsg2Service(this, AppConfig.MSG_REGISTER_CLIENT, "")
+    }
+
+    override fun onStop() {
+        com.v2ray.ang.helper.MessageHelper.sendMsg2Service(this, AppConfig.MSG_UNREGISTER_CLIENT, "")
+        super.onStop()
     }
 
     @Composable
@@ -106,19 +140,21 @@ class MainActivity : HelperBaseComponentActivity() {
             mainViewModel = mainViewModel,
             onAction = { action ->
                 when (action) {
-                    MainAction.ToggleService -> handleFabAction()
                     MainAction.TestCurrentServer -> handleLayoutTestClick()
                     MainAction.ImportQRcode -> importQRcode()
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
                     is MainAction.ImportManually -> importManually(action.type)
-                    MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+                    MainAction.RestartService -> LauncherManager.restartServiceOrStart(this) {
+                        mainViewModel.onAction(MainAction.ConnectNormal)
+                    }
                     MainAction.LocateSelectedServer -> mainViewModel.triggerLocateSelectedServer()
                     is MainAction.SelectServer -> setSelectServer(action.guid)
                     is MainAction.EditServer -> editServer(action.guid, action.profile)
                     is MainAction.ShareClipboard -> shareToClipboard(action.guid)
                     is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
                     is MainAction.OpenSubscriptionLink -> openSubscriptionLink(action.url)
+                    MainAction.OpenVipBot -> Utils.openUri(this, AppConfig.VIP_BOT_URL)
                     else -> mainViewModel.onAction(action)
                 }
             },
@@ -140,8 +176,9 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun openSubscriptionLink(url: String) {
-        // Links come from a remote panel, so only http(s) and tg:// are ever handed to ACTION_VIEW.
+        // Subscription Telegram channel links are excluded from the app UI.
         val safeUrl = SubscriptionInfoParser.sanitizeLink(url) ?: return
+        if (SubscriptionInfoParser.isTelegramLink(safeUrl)) return
         Utils.openUri(this, safeUrl)
     }
 
@@ -156,32 +193,22 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
             MainDestination.About -> Intent(this, AboutActivity::class.java)
-            MainDestination.Promotion -> {
-                Utils.openUri(
-                    this,
-                    "${Utils.decode(AppConfig.APP_PROMOTION_URL)}?t=${System.currentTimeMillis()}"
-                )
-                return
-            }
         }
         settingsActivityLauncher.launch(intent)
     }
 
-    private fun handleFabAction() {
-        if (mainViewModel.uiState.value.isRunning) {
-            LauncherManager.stopService(this)
-        } else {
-            requestServiceStart()
-        }
-    }
-
-    private fun requestServiceStart() {
+    private fun requestServiceStart(configId: String? = mainViewModel.uiState.value.selectedGuid) {
         if (!SettingsManager.isVpnMode()) {
-            startV2Ray()
+            startV2Ray(configId)
             return
         }
         val intent = VpnService.prepare(this)
-        if (intent == null) startV2Ray() else requestVpnPermission.launch(intent)
+        if (intent == null) {
+            startV2Ray(configId)
+        } else {
+            pendingStartConfigId = configId
+            requestVpnPermission.launch(intent)
+        }
     }
 
     private fun handleLayoutTestClick() {
@@ -190,12 +217,14 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
-    private fun startV2Ray() {
-        if (mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) {
+    private fun startV2Ray(configId: String? = mainViewModel.uiState.value.selectedGuid) {
+        val targetId = configId ?: mainViewModel.uiState.value.selectedGuid
+        if (targetId.isNullOrEmpty()) {
             toast(R.string.title_file_chooser)
+            mainViewModel.onStartAborted()
             return
         }
-        LauncherManager.startService(this)
+        LauncherManager.startService(this, targetId)
     }
 
     private fun importManually(createConfigType: Int) {
@@ -278,7 +307,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun setSelectServer(guid: String) {
         val selected = mainViewModel.uiState.value.selectedGuid
         if (guid != selected) {
-            mainViewModel.updateSelectedGuid(guid)
+            mainViewModel.updateSelectedGuid(guid, asManualNormal = true)
             LauncherManager.restartService(this)
         }
     }

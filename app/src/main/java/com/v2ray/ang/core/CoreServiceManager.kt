@@ -476,6 +476,7 @@ object CoreServiceManager {
             val serviceControl = serviceControl?.get() ?: return
             when (intent?.getIntExtra("key", 0)) {
                 AppConfig.MSG_REGISTER_CLIENT -> {
+                    NotificationManager.setUiTelemetryActive(true)
                     if (isRunning()) {
                         MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, "")
                     } else {
@@ -484,7 +485,7 @@ object CoreServiceManager {
                 }
 
                 AppConfig.MSG_UNREGISTER_CLIENT -> {
-                    // nothing to do
+                    NotificationManager.setUiTelemetryActive(false)
                 }
 
                 AppConfig.MSG_STATE_START -> {

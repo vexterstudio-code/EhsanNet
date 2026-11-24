@@ -16,6 +16,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,12 +34,18 @@ import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.extension.toTrafficString
 import com.v2ray.ang.handler.SubscriptionInfoParser
+import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.cyberBlueElectric
+import com.v2ray.ang.ui.compose.cyberCardBorderDark
+import com.v2ray.ang.ui.compose.cyberCardBorderLight
+import com.v2ray.ang.ui.compose.cyberCardDark
+import com.v2ray.ang.ui.compose.cyberCardLight
 import com.v2ray.ang.util.Utils
 
 private const val MILLIS_PER_SECOND = 1000L
 private const val EXPIRY_DATE_PATTERN = "yyyy-MM-dd"
 private const val NO_EXPIRY_SYMBOL = "\u221E"
-private const val CARD_ALPHA = 0.97f
+private const val CARD_ALPHA = 0.96f
 
 /** Locale-neutral values the subscription information box renders. */
 internal data class SubscriptionInfoUiModel(
@@ -55,6 +62,12 @@ internal data class SubscriptionInfoUiModel(
     val webPageUrl: String?,
 ) {
     val trafficLow: Boolean get() = trafficFraction != null && trafficFraction >= TRAFFIC_WARNING_FRACTION
+
+    fun visibleSupportUrl(): String? =
+        supportUrl?.takeUnless(SubscriptionInfoParser::isTelegramLink)
+
+    fun visibleWebPageUrl(): String? =
+        webPageUrl?.takeUnless(SubscriptionInfoParser::isTelegramLink)
 
     companion object {
         const val TRAFFIC_WARNING_FRACTION = 0.9f
@@ -81,7 +94,7 @@ internal fun buildSubscriptionInfoUiModel(
 
 /**
  * Fixed box on top of a subscription group showing the account information published by the
- * subscription panel: traffic, expiry date and shortcuts (support link, panel page, update).
+ * subscription panel: traffic, expiry date and non-Telegram shortcuts (support page, refresh).
  */
 @Composable
 internal fun SubscriptionInfoCard(
@@ -92,17 +105,21 @@ internal fun SubscriptionInfoCard(
     modifier: Modifier = Modifier,
 ) {
     val model = remember(info) { buildSubscriptionInfoUiModel(info, System.currentTimeMillis()) }
+    val nonTelegramSupportUrl = remember(model) { model.visibleSupportUrl() }
+    val nonTelegramWebPageUrl = remember(model) { model.visibleWebPageUrl() }
+    val isDark = LocalDarkTheme.current
+    val cardColor = (if (isDark) cyberCardDark else cyberCardLight).copy(alpha = CARD_ALPHA)
+    val borderColor = if (isDark) cyberBlueElectric.copy(alpha = 0.3f) else cyberCardBorderLight
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        // Almost opaque: the list scrolls underneath without showing through readably.
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = CARD_ALPHA),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(16.dp),
+        color = cardColor,
+        border = BorderStroke(1.dp, borderColor),
     ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 2.dp, bottom = 10.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = model.title ?: fallbackTitle,
@@ -112,18 +129,14 @@ internal fun SubscriptionInfoCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                model.supportUrl?.let { url ->
+                nonTelegramSupportUrl?.let { url ->
                     CardIconButton(
-                        iconRes = if (SubscriptionInfoParser.isTelegramLink(url)) {
-                            R.drawable.ic_telegram_24dp
-                        } else {
-                            R.drawable.ic_feedback_24dp
-                        },
+                        iconRes = R.drawable.ic_feedback_24dp,
                         contentDescription = stringResource(R.string.sub_info_open_support),
                         onClick = { onOpenLink(url) },
                     )
                 }
-                model.webPageUrl?.let { url ->
+                nonTelegramWebPageUrl?.let { url ->
                     CardIconButton(
                         iconRes = R.drawable.ic_about_24dp,
                         contentDescription = stringResource(R.string.sub_info_open_page),
@@ -146,13 +159,13 @@ internal fun SubscriptionInfoCard(
             ) {
                 StatsRow(model)
                 model.trafficFraction?.let { fraction ->
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { fraction },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
                             .clearAndSetSemantics {},
                         color = if (model.trafficLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -165,8 +178,18 @@ internal fun SubscriptionInfoCard(
 
 @Composable
 private fun CardIconButton(iconRes: Int, contentDescription: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(32.dp)) {
-        Icon(painterResource(iconRes), contentDescription, Modifier.size(20.dp))
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .size(36.dp)
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(19.dp)
+        )
     }
 }
 
